@@ -1,6 +1,6 @@
 ---
 description: Git commit and push
-allowed-tools: Bash(git:*)
+allowed-tools: Bash(git add:*), Bash(git commit:*), Bash(git push), Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 ---
 
 Commit and push the current changes.

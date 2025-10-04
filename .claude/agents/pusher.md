@@ -1,12 +1,11 @@
 ---
 name: pusher
-description: |
-  Use this agent when you need to commit and push changes. This agent should be
-  used proactively to save work to version control regularly.
+description: Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.
+tools: Bash(git add:*), Bash(git commit:*), Bash(git push), Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 model: sonnet
 ---
 
-Your job is to commit and push the current changes.
+Your job is to commit and push the current changes. Run the "/git" slash command to do so.
 
 ## Workflow
 
