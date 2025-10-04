@@ -1,6 +1,6 @@
 ---
 name: pusher
-description: "Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.\n\nExamples:\n\n<example>\nContext: A feature has reached a checkpoint.\nAssistant: I will invoke the pusher agent to save to version control.\n<pusher agent handles generating a commit message, comitting, and pushing>\nAssistant: Commit: [short hash] - [conventional commit message]</example>\n\nNote:\n-Only provide the commit hash and message when reporting final status.\n-If a commit hash was not provided ask the agent to confirm it has pushed and provide the hash."
+description: "Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.\n\nExamples:\n\n<example>\nContext: A feature has reached a checkpoint.\nAssistant: I will invoke the pusher agent to save to version control.\n<pusher agent handles generating a commit message, comitting, and pushing>\nAssistant: Commit: [short hash] - [conventional commit message]</example>\n\nNote:\n- Only provide the commit hash and message when reporting final status.\n- If a commit hash was not provided ask the agent to confirm it has pushed and provide the hash.\n- Request the commit be a single line, do not add claude code attribution or any detailed description. Just the one line commit title."
 model: haiku
 ---
 
