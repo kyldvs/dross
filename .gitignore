@@ -16,3 +16,31 @@ npm-debug.log*
 
 # use pnpm, not npm
 .package-lock.json
+
+# Python workspace
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+uv.lock
+.venv/
+*.egg-info/
+dist/
+build/
+
+# TypeScript workspace
+*.tsbuildinfo
+.next/
+.turbo/
+pnpm-lock.yaml
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
