@@ -18,59 +18,83 @@ This document provides step-by-step instructions to implement the monorepo itera
 
 **Command**:
 ```bash
-mkdir -p tasks/python tasks/ts tasks/repo
+mkdir -p tasks/py tasks/ts tasks/repo
 ```
 
 **Verification**:
 ```bash
 ls -la tasks/
-# Should show: python/ ts/ repo/
+# Should show: py/ ts/ repo/
 ```
 
 **Notes**:
 - Create all directories at once
+- Uses `py/` and `ts/` to match the workspace naming we'll use
 - No files yet, just structure
 
 ### Step 1.2: Create Python justfile
 
-**Action**: Create `/tasks/python/justfile`
+**Action**: Create `/tasks/py/justfile`
 
 **Content**:
 ```just
-# Sync Python dependencies
-sync-py:
-    cd python && uv sync
+# Python workspace commands
+py command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd python
+    case "{{command}}" in
+        sync)
+            uv sync
+            ;;
+        lint)
+            ruff check .
+            ;;
+        format)
+            ruff format .
+            ;;
+        check)
+            ty check .
+            ;;
+        *)
+            echo "Unknown py command: {{command}}"
+            echo "Available: sync, lint, format, check"
+            exit 1
+            ;;
+    esac
 
-# Sync specific Python package
-sync-py-pkg package:
-    cd python && uv sync --package {{package}}
-
-# Run Python package
-run-py package:
-    cd python && uv run {{package}}
-
-# Lint Python code
-lint-py:
-    cd python && ruff check .
-
-# Format Python code
-format-py:
-    cd python && ruff format .
-
-# Type check Python code
-check-py:
-    cd python && ty check .
+# Python package-specific commands
+py-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd python
+    case "{{command}}" in
+        sync)
+            uv sync --package {{package}}
+            ;;
+        run)
+            uv run {{package}}
+            ;;
+        *)
+            echo "Unknown py-pkg command: {{command}}"
+            echo "Available: sync, run"
+            exit 1
+            ;;
+    esac
 ```
 
 **Verification**:
 ```bash
-cat tasks/python/justfile
+cat tasks/py/justfile
 # Should show the content above
 ```
 
 **Notes**:
-- Use exact spacing (4 spaces for recipe body)
-- Comments are important for `just --list` output
+- Uses namespace-style recipes with parameters
+- Uses `python` directory path (will update after rename)
+- Bash shebang allows multi-line scripts
+- `set -euo pipefail` ensures errors propagate
+- Case statement maps commands to tools
 
 ### Step 1.3: Create TypeScript justfile
 
@@ -78,29 +102,52 @@ cat tasks/python/justfile
 
 **Content**:
 ```just
-# Install TypeScript dependencies
-install-ts:
-    cd typescript && pnpm install
+# TypeScript workspace commands
+ts command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd typescript
+    case "{{command}}" in
+        install)
+            pnpm install
+            ;;
+        dev)
+            pnpm -r run dev
+            ;;
+        lint)
+            pnpm -r run lint
+            ;;
+        format)
+            pnpm -r run format
+            ;;
+        build)
+            pnpm -r run build
+            ;;
+        *)
+            echo "Unknown ts command: {{command}}"
+            echo "Available: install, dev, lint, format, build"
+            exit 1
+            ;;
+    esac
 
-# Run dev in all TypeScript packages
-dev-ts:
-    cd typescript && pnpm -r run dev
-
-# Run dev in specific TypeScript package
-dev-ts-pkg package:
-    cd typescript && pnpm --filter {{package}} run dev
-
-# Lint TypeScript code
-lint-ts:
-    cd typescript && pnpm -r run lint
-
-# Format TypeScript code
-format-ts:
-    cd typescript && pnpm -r run format
-
-# Build TypeScript packages
-build-ts:
-    cd typescript && pnpm -r run build
+# TypeScript package-specific commands
+ts-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd typescript
+    case "{{command}}" in
+        dev)
+            pnpm --filter {{package}} run dev
+            ;;
+        build)
+            pnpm --filter {{package}} run build
+            ;;
+        *)
+            echo "Unknown ts-pkg command: {{command}}"
+            echo "Available: dev, build"
+            exit 1
+            ;;
+    esac
 ```
 
 **Verification**:
@@ -118,13 +165,19 @@ cat tasks/ts/justfile
 **Content**:
 ```just
 # Lint everything
-lint: lint-py lint-ts
+lint:
+    just py lint
+    just ts lint
 
 # Format everything
-format: format-py format-ts
+format:
+    just py format
+    just ts format
 
 # Install/sync all dependencies
-install: sync-py install-ts
+install:
+    just py sync
+    just ts install
 
 # Clean generated files
 clean:
@@ -138,7 +191,7 @@ cat tasks/repo/justfile
 # Should show the content above
 ```
 
-**Important**: Uses `typescript` path in clean command (will update after rename)
+**Important**: Uses `python` and `typescript` paths in clean command (will update after rename)
 
 ### Step 1.5: Create root justfile
 
@@ -147,7 +200,7 @@ cat tasks/repo/justfile
 **Content**:
 ```just
 # Import domain-specific task definitions
-import 'tasks/python/justfile'
+import 'tasks/py/justfile'
 import 'tasks/ts/justfile'
 import 'tasks/repo/justfile'
 
@@ -170,6 +223,7 @@ just --list
 
 **Notes**:
 - Import paths are relative to root justfile
+- Imports from `tasks/py/` and `tasks/ts/` (matching directory structure)
 - `@` prefix suppresses command echo
 - Default recipe runs when `just` is called with no arguments
 
@@ -181,29 +235,41 @@ just --list
 ```bash
 # From repository root
 just --list                    # Shows all commands
-just sync-py                   # Syncs Python dependencies
-just install-ts                # Installs TypeScript dependencies
-just lint-py                   # Lints Python code
-just lint-ts                   # Lints TypeScript code
-just format-py                 # Formats Python code
-just format-ts                 # Formats TypeScript code
-just check-py                  # Type checks Python
-just build-ts                  # Builds TypeScript packages
+
+# Test Python commands
+just py sync                   # Syncs Python dependencies
+just py lint                   # Lints Python code
+just py format                 # Formats Python code
+just py check                  # Type checks Python
+
+# Test TypeScript commands
+just ts install                # Installs TypeScript dependencies
+just ts dev                    # Runs dev in all packages (will start dev servers)
+just ts lint                   # Lints TypeScript code
+just ts format                 # Formats TypeScript code
+just ts build                  # Builds TypeScript packages
 ```
 
 **Test Composite Commands**:
 ```bash
-just install                   # Should run sync-py and install-ts
-just lint                      # Should run lint-py and lint-ts
-just format                    # Should run format-py and format-ts
+just install                   # Should run py sync and ts install
+just lint                      # Should run py lint and ts lint
+just format                    # Should run py format and ts format
 ```
 
 **Test Parameterized Commands**:
 ```bash
 # Replace 'example' with actual package name from your repo
-just sync-py-pkg example       # Syncs specific Python package
-just run-py example            # Runs Python package
-just dev-ts-pkg example        # Runs dev for TypeScript package
+just py-pkg sync example       # Syncs specific Python package
+just py-pkg run example        # Runs Python package
+just ts-pkg dev example        # Runs dev for TypeScript package
+just ts-pkg build example      # Builds specific TypeScript package
+```
+
+**Test Error Handling**:
+```bash
+just py unknown                # Should show error: "Unknown py command: unknown"
+just ts-pkg invalid pkg        # Should show error: "Unknown ts-pkg command: invalid"
 ```
 
 **Verification**:
@@ -211,109 +277,207 @@ just dev-ts-pkg example        # Runs dev for TypeScript package
 - Output matches direct tool invocation
 - Exit codes are correct (0 for success)
 - Can run any command from any directory in repo
+- Unknown commands show helpful error messages
 
 **Troubleshooting**:
 - If recipes not found: Check import paths in root justfile
-- If cd fails: Verify workspace directories exist
+- If cd fails: Verify workspace directories exist (python/ and typescript/)
 - If tools fail: Verify dependencies installed
+- If bash script fails: Ensure bash is available and executable
 
-## Phase 2: Rename Directory
+## Phase 2: Rename Directories
 
-### Step 2.1: Rename typescript to ts
+### Step 2.1: Rename both workspace directories
 
-**Action**: Use git mv to rename directory and preserve history
+**Action**: Use git mv to rename directories and preserve history
 
-**Command**:
+**Commands**:
 ```bash
+git mv python py
 git mv typescript ts
 ```
 
 **Verification**:
 ```bash
 ls -la
-# Should show ts/ instead of typescript/
+# Should show py/ and ts/ instead of python/ and typescript/
 git status
-# Should show: renamed: typescript/ -> ts/
+# Should show:
+# renamed: python/ -> py/
+# renamed: typescript/ -> ts/
 ```
 
 **Notes**:
 - git mv preserves file history
-- This is a staged change, not yet committed
+- These are staged changes, not yet committed
 - All files inside are moved atomically
+- Both renames can be done in one step
 
-### Step 2.2: Update TypeScript justfile paths
+### Step 2.2: Update Python justfile paths
 
-**Action**: Edit `/tasks/ts/justfile` to use new `ts` path
+**Action**: Edit `/tasks/py/justfile` to use new `py` path
 
-**Changes**: Replace all instances of `typescript` with `ts`
+**Changes**: Replace all instances of `python` with `py` in the `cd` commands
 
 **Result**:
 ```just
-# Install TypeScript dependencies
-install-ts:
-    cd ts && pnpm install
+# Python workspace commands
+py command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        sync)
+            uv sync
+            ;;
+        lint)
+            ruff check .
+            ;;
+        format)
+            ruff format .
+            ;;
+        check)
+            ty check .
+            ;;
+        *)
+            echo "Unknown py command: {{command}}"
+            echo "Available: sync, lint, format, check"
+            exit 1
+            ;;
+    esac
 
-# Run dev in all TypeScript packages
-dev-ts:
-    cd ts && pnpm -r run dev
-
-# Run dev in specific TypeScript package
-dev-ts-pkg package:
-    cd ts && pnpm --filter {{package}} run dev
-
-# Lint TypeScript code
-lint-ts:
-    cd ts && pnpm -r run lint
-
-# Format TypeScript code
-format-ts:
-    cd ts && pnpm -r run format
-
-# Build TypeScript packages
-build-ts:
-    cd ts && pnpm -r run build
+# Python package-specific commands
+py-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        sync)
+            uv sync --package {{package}}
+            ;;
+        run)
+            uv run {{package}}
+            ;;
+        *)
+            echo "Unknown py-pkg command: {{command}}"
+            echo "Available: sync, run"
+            exit 1
+            ;;
+    esac
 ```
 
 **Verification**:
 ```bash
-just install-ts
+just py sync
 # Should work with new path
-just lint-ts
+just py lint
 # Should work with new path
 ```
 
-### Step 2.3: Update repository justfile paths
+### Step 2.3: Update TypeScript justfile paths
 
-**Action**: Edit `/tasks/repo/justfile` clean command to use new `ts` path
+**Action**: Edit `/tasks/ts/justfile` to use new `ts` path
 
-**Changes**: Replace `typescript` with `ts` in clean recipe
+**Changes**: Replace all instances of `typescript` with `ts` in the `cd` commands
+
+**Result**:
+```just
+# TypeScript workspace commands
+ts command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ts
+    case "{{command}}" in
+        install)
+            pnpm install
+            ;;
+        dev)
+            pnpm -r run dev
+            ;;
+        lint)
+            pnpm -r run lint
+            ;;
+        format)
+            pnpm -r run format
+            ;;
+        build)
+            pnpm -r run build
+            ;;
+        *)
+            echo "Unknown ts command: {{command}}"
+            echo "Available: install, dev, lint, format, build"
+            exit 1
+            ;;
+    esac
+
+# TypeScript package-specific commands
+ts-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ts
+    case "{{command}}" in
+        dev)
+            pnpm --filter {{package}} run dev
+            ;;
+        build)
+            pnpm --filter {{package}} run build
+            ;;
+        *)
+            echo "Unknown ts-pkg command: {{command}}"
+            echo "Available: dev, build"
+            exit 1
+            ;;
+    esac
+```
+
+**Verification**:
+```bash
+just ts install
+# Should work with new path
+just ts lint
+# Should work with new path
+```
+
+### Step 2.4: Update repository justfile paths
+
+**Action**: Edit `/tasks/repo/justfile` clean command to use new `py` and `ts` paths
+
+**Changes**: Replace `python` with `py` and `typescript` with `ts` in clean recipe
 
 **Result**:
 ```just
 # Lint everything
-lint: lint-py lint-ts
+lint:
+    just py lint
+    just ts lint
 
 # Format everything
-format: format-py format-ts
+format:
+    just py format
+    just ts format
 
 # Install/sync all dependencies
-install: sync-py install-ts
+install:
+    just py sync
+    just ts install
 
 # Clean generated files
 clean:
-    rm -rf python/.venv python/**/__pycache__
+    rm -rf py/.venv py/**/__pycache__
     rm -rf ts/node_modules ts/**/node_modules ts/**/.next ts/**/.turbo
 ```
 
 **Verification**:
 ```bash
 just clean
-# Should remove generated files from ts/ directory
+# Should remove generated files from both py/ and ts/ directories
+ls py/
+# .venv should be gone
 ls ts/
 # node_modules should be gone
 ```
 
-### Step 2.4: Test all commands with new structure
+### Step 2.5: Test all commands with new structure
 
 **Action**: Re-run all test commands from Phase 1 Step 1.6
 
@@ -322,31 +486,33 @@ ls ts/
 just install
 just lint
 just format
-just build-ts
-just sync-py
-just check-py
+just py sync
+just py check
+just ts build
 ```
 
 **Verification**:
 - All commands work exactly as before
 - No errors about missing directories
-- Tools find their files correctly
+- Tools find their files correctly in py/ and ts/
 
 ## Phase 3: Update Documentation
 
 ### Step 3.1: Update .gitignore (if needed)
 
-**Action**: Check if .gitignore has typescript-specific entries
+**Action**: Check if .gitignore has python or typescript-specific entries
 
-**Command**:
+**Commands**:
 ```bash
+grep -n "python" .gitignore
 grep -n "typescript" .gitignore
 ```
 
-**If found**: Replace `typescript` with `ts`
+**If found**: Replace `python` with `py` and `typescript` with `ts`
 
 **Verification**:
 ```bash
+grep -n "py" .gitignore
 grep -n "ts" .gitignore
 # Should show updated entries
 ```
@@ -375,14 +541,14 @@ just install
 
 ```bash
 # TypeScript
-just dev-ts                    # All packages
-just dev-ts-pkg example        # Specific package
-just build-ts                  # Build all packages
+just ts dev                    # All packages
+just ts-pkg dev example        # Specific package
+just ts build                  # Build all packages
 
 # Python
-just run-py example            # Run Python package
-just sync-py                   # Sync all dependencies
-just sync-py-pkg example       # Sync specific package
+just py-pkg run example        # Run Python package
+just py sync                   # Sync all dependencies
+just py-pkg sync example       # Sync specific package
 ```
 
 ### Code Quality
@@ -390,7 +556,7 @@ just sync-py-pkg example       # Sync specific package
 ```bash
 just lint                      # Lint everything
 just format                    # Format everything
-just check-py                  # Type check Python
+just py check                  # Type check Python
 ```
 
 ### Explore Commands
@@ -405,7 +571,7 @@ just help                      # Same as --list
 You can still use tools directly if needed:
 
 ```bash
-cd python && uv sync
+cd py && uv sync
 cd ts && pnpm install
 ```
 
@@ -431,7 +597,7 @@ This repository uses `just` as a command runner to centralize all operations at 
 Commands are organized by domain in separate justfiles:
 
 - `/justfile` - Entry point that imports domain justfiles
-- `/tasks/python/justfile` - Python workspace commands
+- `/tasks/py/justfile` - Python workspace commands
 - `/tasks/ts/justfile` - TypeScript workspace commands
 - `/tasks/repo/justfile` - Cross-cutting repository commands
 
@@ -439,24 +605,26 @@ Commands are organized by domain in separate justfiles:
 
 1. **Run from root**: Never need to cd into workspace directories
 2. **Simple wrappers**: Just recipes wrap existing tool commands, no complex logic
-3. **Domain separation**: Commands grouped by workspace for clarity
-4. **Composition**: Combined commands (like `lint`) depend on workspace-specific commands
+3. **Namespace-style**: Commands use `just <workspace> <command>` pattern (e.g., `just py lint`)
+4. **Domain separation**: Commands grouped by workspace for clarity
+5. **Composition**: Combined commands (like `lint`) call workspace-specific commands
 
 ### Command Naming
 
-- Workspace-specific: `<verb>-<workspace>` (e.g., `lint-py`, `dev-ts`)
-- Package-specific: `<verb>-<workspace>-pkg` (e.g., `sync-py-pkg`, `dev-ts-pkg`)
-- Repository-wide: `<verb>` (e.g., `lint`, `format`, `install`, `clean`)
+- Workspace commands: `just <workspace> <command>` (e.g., `just py lint`, `just ts dev`)
+- Package commands: `just <workspace>-pkg <command> <package>` (e.g., `just py-pkg run example`)
+- Repository-wide: `just <command>` (e.g., `just lint`, `just format`, `just install`, `just clean`)
 
 ### Adding Commands
 
 To add new commands:
 
-1. Identify the domain (python, ts, or repo)
-2. Add recipe to appropriate justfile in `/tasks/`
-3. Follow the `cd <workspace> && <command>` pattern
-4. Keep it simple - just wrap the tool, don't add logic
-5. Test from repository root
+1. Identify the domain (py, ts, or repo)
+2. Edit the appropriate justfile in `/tasks/`
+3. For workspace commands: Add a new case in the existing case statement
+4. For repo commands: Add a new recipe that calls workspace commands
+5. Keep it simple - just wrap the tool, don't add logic
+6. Test from repository root
 ```
 
 **Verification**: Read the section to ensure it makes sense
@@ -477,15 +645,31 @@ To add new commands:
 
 **Solution**: Use `just` to run all commands from repository root.
 
-**Trade-off**: Slightly longer command names (`just lint-py` vs `cd python && ruff check`) for significantly better ergonomics. Worth it.
+**Trade-off**: Slightly longer command names (`just py lint` vs `cd py && ruff check`) for significantly better ergonomics. Worth it.
 
-### Why Rename typescript to ts?
+### Why Rename python to py and typescript to ts?
 
-**Problem**: `typescript` is long to type and read in commands.
+**Problem**: `python` and `typescript` are long to type and read in commands.
 
-**Solution**: Rename to `ts`, the common abbreviation.
+**Solution**: Rename to `py` and `ts`, the common abbreviations.
 
-**Trade-off**: One-time update cost for long-term ergonomic benefit. The workspace is still TypeScript, the directory is just shorter.
+**Trade-off**: One-time update cost for long-term ergonomic benefit. The workspaces are still Python and TypeScript, the directories are just shorter.
+
+**Consistency**: Both workspaces use 2-character names, creating a consistent pattern.
+
+### Why Namespace-Style Commands?
+
+**Problem**: Proliferation of separate recipes (lint-py, format-py, check-py, etc.) creates noise.
+
+**Solution**: Use recipe parameters to create namespace-style commands (`just py lint`, `just ts build`).
+
+**Trade-off**: Slightly more complex recipe implementation (case statements) for cleaner command interface. Scales much better.
+
+**Benefits**:
+- Natural to read and type (workspace first, then action)
+- Easy to discover (error messages show available commands)
+- Simple to extend (add new cases, don't create new recipes)
+- Consistent with modern CLIs (git, kubectl, docker, etc.)
 
 ### Why Split Justfiles By Domain?
 
@@ -531,7 +715,7 @@ Alternatives considered:
 
 **Action**: Find existing directory structure documentation and update paths
 
-**Changes**: Replace `typescript/` with `ts/` in structure diagrams
+**Changes**: Replace `python/` with `py/` and `typescript/` with `ts/` in structure diagrams
 
 **Example**:
 ```markdown
@@ -539,14 +723,14 @@ Alternatives considered:
 
 ```
 /
-├── python/              # Python workspace
+├── py/                 # Python workspace
 │   ├── packages/       # Shared Python packages
 │   └── apps/           # Python applications
 ├── ts/                 # TypeScript workspace
 │   ├── packages/       # Shared TypeScript packages
 │   └── apps/           # TypeScript applications
 ├── tasks/              # Just task definitions
-│   ├── python/        # Python commands
+│   ├── py/            # Python commands
 │   ├── ts/            # TypeScript commands
 │   └── repo/          # Repository commands
 ├── docs/               # Documentation
@@ -554,7 +738,7 @@ Alternatives considered:
 ```
 ```
 
-**Verification**: Ensure all path references use `ts` not `typescript`
+**Verification**: Ensure all path references use `py` and `ts` not `python` and `typescript`
 
 ### Step 3.6: Update workspace-specific sections
 
@@ -567,12 +751,12 @@ Add after existing introduction:
 ### Using Just Commands (Recommended)
 
 ```bash
-just sync-py                   # Sync all dependencies
-just sync-py-pkg example       # Sync specific package
-just run-py example            # Run package
-just lint-py                   # Lint code
-just format-py                 # Format code
-just check-py                  # Type check
+just py sync                   # Sync all dependencies
+just py-pkg sync example       # Sync specific package
+just py-pkg run example        # Run package
+just py lint                   # Lint code
+just py format                 # Format code
+just py check                  # Type check
 ```
 
 ### Direct Tool Usage
@@ -580,7 +764,7 @@ just check-py                  # Type check
 You can still use uv directly:
 
 ```bash
-cd python
+cd py
 uv sync
 uv run example
 ```
@@ -593,12 +777,12 @@ Add after existing introduction:
 ### Using Just Commands (Recommended)
 
 ```bash
-just install-ts                # Install dependencies
-just dev-ts                    # Run dev in all packages
-just dev-ts-pkg example        # Run dev in specific package
-just lint-ts                   # Lint code
-just format-ts                 # Format code
-just build-ts                  # Build all packages
+just ts install                # Install dependencies
+just ts dev                    # Run dev in all packages
+just ts-pkg dev example        # Run dev in specific package
+just ts lint                   # Lint code
+just ts format                 # Format code
+just ts build                  # Build all packages
 ```
 
 ### Direct Tool Usage
@@ -614,21 +798,25 @@ pnpm -r run dev
 
 **Verification**: Ensure both approaches are documented clearly
 
-### Step 3.7: Search for remaining typescript/ references
+### Step 3.7: Search for remaining python/ and typescript/ references
 
-**Action**: Find and update any remaining references to old path
+**Action**: Find and update any remaining references to old paths
 
-**Command**:
+**Commands**:
 ```bash
+grep -r "python/" docs/
+grep -r "python/" README.md
 grep -r "typescript/" docs/
 grep -r "typescript/" README.md
 ```
 
-**Action**: Update each found reference to use `ts/`
+**Action**: Update each found reference to use `py/` and `ts/`
 
 **Verification**:
 ```bash
 # Should find no results or only in historical context
+grep -r "python/" docs/
+grep -r "python/" README.md
 grep -r "typescript/" docs/
 grep -r "typescript/" README.md
 ```
@@ -644,12 +832,12 @@ grep -r "typescript/" README.md
 **Commands**:
 ```bash
 just clean
-rm -rf python/.venv ts/node_modules
+rm -rf py/.venv ts/node_modules
 ```
 
 **Verification**:
 ```bash
-ls python/
+ls py/
 # Should not show .venv
 ls ts/
 # Should not show node_modules
@@ -672,7 +860,7 @@ just install
 
 **Success Criteria**:
 ```bash
-ls python/.venv
+ls py/.venv
 # Should exist
 ls ts/node_modules
 # Should exist
@@ -684,10 +872,10 @@ ls ts/node_modules
 
 **Commands**:
 ```bash
-just sync-py                   # Should sync dependencies
-just lint-py                   # Should lint (may show issues)
-just format-py                 # Should format code
-just check-py                  # Should type check
+just py sync                   # Should sync dependencies
+just py lint                   # Should lint (may show issues)
+just py format                 # Should format code
+just py check                  # Should type check
 ```
 
 **Verification**:
@@ -703,10 +891,10 @@ just check-py                  # Should type check
 
 **Commands**:
 ```bash
-just install-ts                # Should install (already done)
-just lint-ts                   # Should lint
-just format-ts                 # Should format
-just build-ts                  # Should build packages
+just ts install                # Should install (already done)
+just ts lint                   # Should lint
+just ts format                 # Should format
+just ts build                  # Should build packages
 ```
 
 **Verification**:
@@ -735,15 +923,23 @@ just format                    # Should format both workspaces
 
 **Commands** (replace 'example' with actual package names):
 ```bash
-just sync-py-pkg <python-package-name>
-just run-py <python-package-name>
-just dev-ts-pkg <typescript-package-name>
+just py-pkg sync <python-package-name>
+just py-pkg run <python-package-name>
+just ts-pkg dev <typescript-package-name>
+just ts-pkg build <typescript-package-name>
 ```
 
 **Verification**:
 - Package-specific operations run
 - Only specified package affected
 - No errors about missing packages
+
+**Test Error Handling**:
+```bash
+just py unknown                # Should show "Unknown py command: unknown"
+just ts invalid                # Should show "Unknown ts command: invalid"
+just py-pkg badcmd pkg         # Should show "Unknown py-pkg command: badcmd"
+```
 
 ### Step 4.7: Documentation test
 
@@ -752,12 +948,13 @@ just dev-ts-pkg <typescript-package-name>
 **Checklist**:
 - [ ] Quick Start section exists and is clear
 - [ ] Command System section explains organization
-- [ ] Design Decisions section explains choices
-- [ ] Directory Structure uses `ts/` not `typescript/`
-- [ ] Python Workspace section references just commands
-- [ ] TypeScript Workspace section references just commands
-- [ ] No broken references to `typescript/` directory
+- [ ] Design Decisions section explains choices (including namespace-style)
+- [ ] Directory Structure uses `py/` and `ts/` not `python/` and `typescript/`
+- [ ] Python Workspace section references namespace-style just commands
+- [ ] TypeScript Workspace section references namespace-style just commands
+- [ ] No broken references to `python/` or `typescript/` directories
 - [ ] Examples are concrete and testable
+- [ ] Namespace-style commands are documented (`just py lint`, `just ts dev`)
 
 **Method**: Read through README.md as if you're a new developer
 
@@ -774,16 +971,21 @@ just --list
 - All commands show with descriptions
 - Commands grouped logically
 - Descriptions match comment lines from justfiles
+- Namespace recipes appear (py, ts, py-pkg, ts-pkg)
 
 **Expected Output Format**:
 ```
 Available recipes:
-    build-ts             # Build TypeScript packages
-    check-py            # Type check Python code
     clean               # Clean generated files
     default             # Default recipe: list available commands
-    dev-ts              # Run dev in all TypeScript packages
-    ...
+    format              # Format everything
+    help                # Show available commands
+    install             # Install/sync all dependencies
+    lint                # Lint everything
+    py command          # Python workspace commands
+    py-pkg command package # Python package-specific commands
+    ts command          # TypeScript workspace commands
+    ts-pkg command package # TypeScript package-specific commands
 ```
 
 ### Step 4.9: Cross-platform test (if applicable)
@@ -999,23 +1201,25 @@ git mv typescript ts
 
 Use this to verify implementation is complete:
 
-- [ ] Directory renamed: `typescript/` → `ts/`
-- [ ] Justfiles created: `/justfile`, `/tasks/python/justfile`, `/tasks/ts/justfile`, `/tasks/repo/justfile`
-- [ ] All justfiles use `ts` path (not `typescript`)
+- [ ] Directories renamed: `python/` → `py/` and `typescript/` → `ts/`
+- [ ] Justfiles created: `/justfile`, `/tasks/py/justfile`, `/tasks/ts/justfile`, `/tasks/repo/justfile`
+- [ ] All justfiles use `py` and `ts` paths (not `python` and `typescript`)
+- [ ] Justfiles use namespace-style recipes with case statements
 - [ ] `just --list` shows all commands with descriptions
 - [ ] `just install` installs both workspaces
 - [ ] `just lint` lints both workspaces
 - [ ] `just format` formats both workspaces
 - [ ] `just clean` removes generated files
-- [ ] Python commands work: `sync-py`, `run-py`, `lint-py`, `format-py`, `check-py`
-- [ ] TypeScript commands work: `install-ts`, `dev-ts`, `lint-ts`, `format-ts`, `build-ts`
-- [ ] Parameterized commands work: `sync-py-pkg`, `run-py`, `dev-ts-pkg`
-- [ ] README.md has Quick Start section
-- [ ] README.md has Command System section
-- [ ] README.md has Design Decisions section
-- [ ] README.md Directory Structure uses `ts/`
-- [ ] README.md workspace sections reference just commands
-- [ ] No remaining `typescript/` references (except historical)
+- [ ] Python commands work: `py sync`, `py lint`, `py format`, `py check`
+- [ ] TypeScript commands work: `ts install`, `ts dev`, `ts lint`, `ts format`, `ts build`
+- [ ] Parameterized commands work: `py-pkg sync`, `py-pkg run`, `ts-pkg dev`, `ts-pkg build`
+- [ ] Error handling works: unknown commands show helpful messages
+- [ ] README.md has Quick Start section with namespace-style commands
+- [ ] README.md has Command System section explaining namespace approach
+- [ ] README.md has Design Decisions section (including namespace rationale)
+- [ ] README.md Directory Structure uses `py/` and `ts/`
+- [ ] README.md workspace sections reference namespace-style just commands
+- [ ] No remaining `python/` or `typescript/` references (except historical)
 - [ ] .gitignore updated (if needed)
 - [ ] All changes committed
 - [ ] Final test from clean state passes

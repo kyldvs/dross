@@ -24,14 +24,15 @@ This specification describes how to simplify the monorepo by enabling all comman
 
 ## Changes
 
-### 1. Directory Rename: typescript → ts
+### 1. Directory Renames
 
-**Decision**: Rename `typescript/` to `ts/`
+**Decision**: Rename `python/` to `py/` and `typescript/` to `ts/`
 
 **Rationale**:
-- Simpler to type (10 chars → 2 chars)
-- Matches common abbreviation conventions
+- Dramatically simpler to type (python: 6 chars → 2 chars, typescript: 10 chars → 2 chars)
+- Matches common abbreviation conventions (py, ts)
 - Reduces cognitive load
+- Consistent brevity across both workspaces
 - No technical advantage, pure ergonomics
 
 **Trade-offs**:
@@ -39,21 +40,22 @@ This specification describes how to simplify the monorepo by enabling all comman
 - Long term: Better developer experience
 
 **What Changes**:
-- Directory name on filesystem
+- Directory names on filesystem
 - README.md documentation
-- Any other markdown files referencing the path
+- Any other markdown files referencing the paths
 - Justfile paths (if created first, update after rename)
 - .gitignore entries (if any)
 
 **What Does NOT Change**:
-- Package names (@workspace/*)
-- pnpm-workspace.yaml configuration
+- Python package names or configuration
+- TypeScript package names (@workspace/*)
+- pnpm-workspace.yaml configuration (uses relative paths from ts/ root)
 - package.json files
-- Lock files
-- Tool configurations (biome, tsconfig, etc.)
+- Lock files (pyproject.toml, pnpm-lock.yaml)
+- Tool configurations (biome, tsconfig, pyproject.toml, ruff.toml, etc.)
 - Actual code
 
-**Why These Don't Change**: The directory name is just a container. The TypeScript workspace configuration uses `packages` and `apps` paths, not the parent directory name.
+**Why These Don't Change**: The directory names are just containers. Workspace configurations use relative paths from their roots, not the parent directory names.
 
 ### 2. Justfile Command System
 
@@ -76,7 +78,7 @@ This specification describes how to simplify the monorepo by enabling all comman
 /
 ├── justfile                    # Entry point, imports others
 └── tasks/
-    ├── python/justfile         # Python commands
+    ├── py/justfile             # Python commands
     ├── ts/justfile             # TypeScript commands
     └── repo/justfile           # Cross-cutting commands
 ```
@@ -84,7 +86,7 @@ This specification describes how to simplify the monorepo by enabling all comman
 **Why `/tasks/` directory**:
 - Clear purpose: these are task definitions
 - Out of the way at root level
-- Follows existing conventions (docs/, python/, ts/)
+- Follows existing conventions (docs/, py/, ts/)
 
 **Alternatives Considered**:
 - `.just/`: Hidden directories are harder to discover
@@ -100,7 +102,7 @@ This specification describes how to simplify the monorepo by enabling all comman
 **Content**:
 ```just
 # Import domain-specific task definitions
-import 'tasks/python/justfile'
+import 'tasks/py/justfile'
 import 'tasks/ts/justfile'
 import 'tasks/repo/justfile'
 
@@ -121,91 +123,148 @@ help:
 
 #### Python Justfile Specification
 
-**Path**: `/tasks/python/justfile`
+**Path**: `/tasks/py/justfile`
 
-**Purpose**: Python workspace commands
+**Purpose**: Python workspace commands using namespace-style organization
 
 **Recipes**:
 
 ```just
 # Sync Python dependencies
-sync-py:
-    cd python && uv sync
+py command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        sync)
+            uv sync
+            ;;
+        lint)
+            ruff check .
+            ;;
+        format)
+            ruff format .
+            ;;
+        check)
+            ty check .
+            ;;
+        *)
+            echo "Unknown py command: {{command}}"
+            echo "Available: sync, lint, format, check"
+            exit 1
+            ;;
+    esac
 
 # Sync specific Python package
-sync-py-pkg package:
-    cd python && uv sync --package {{package}}
-
-# Run Python package
-run-py package:
-    cd python && uv run {{package}}
-
-# Lint Python code
-lint-py:
-    cd python && ruff check .
-
-# Format Python code
-format-py:
-    cd python && ruff format .
-
-# Type check Python code
-check-py:
-    cd python && ty check .
+py-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        sync)
+            uv sync --package {{package}}
+            ;;
+        run)
+            uv run {{package}}
+            ;;
+        *)
+            echo "Unknown py-pkg command: {{command}}"
+            echo "Available: sync, run"
+            exit 1
+            ;;
+    esac
 ```
 
 **Design Notes**:
-- All recipes use `cd python &&` pattern for clarity
-- No error handling: let tools fail naturally
-- No complex bash: one command per recipe
-- Parameters use just's `{{variable}}` syntax
-- Recipe names use `-py` suffix for workspace disambiguation
+- Uses recipe parameters to create namespace-like commands
+- Single `py` recipe handles common commands via case statement
+- `py-pkg` recipe handles package-specific operations
+- All recipes use `cd py` to enter workspace
+- `set -euo pipefail` ensures errors propagate correctly
+- Clear error messages for unknown commands
 
 **Why This Works**:
-- `cd python &&` runs in a subshell, doesn't affect caller
-- Tool output goes directly to terminal
-- Exit codes propagate correctly
-- Simple to understand and modify
+- `just py lint` reads naturally as "run py workspace lint command"
+- `just py-pkg run example` reads as "run example in py workspace"
+- Case statement is simple, explicit, and easy to extend
+- Bash shebang allows multi-line logic while keeping recipes readable
+- Exit codes propagate correctly from tools
+
+**Usage Examples**:
+```bash
+just py sync        # Sync all dependencies
+just py lint        # Lint Python code
+just py format      # Format Python code
+just py check       # Type check Python code
+just py-pkg sync example    # Sync specific package
+just py-pkg run example     # Run Python package
+```
 
 #### TypeScript Justfile Specification
 
 **Path**: `/tasks/ts/justfile`
 
-**Purpose**: TypeScript workspace commands
+**Purpose**: TypeScript workspace commands using namespace-style organization
 
 **Recipes**:
 
 ```just
-# Install TypeScript dependencies
-install-ts:
-    cd ts && pnpm install
+# TypeScript workspace commands
+ts command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ts
+    case "{{command}}" in
+        install)
+            pnpm install
+            ;;
+        dev)
+            pnpm -r run dev
+            ;;
+        lint)
+            pnpm -r run lint
+            ;;
+        format)
+            pnpm -r run format
+            ;;
+        build)
+            pnpm -r run build
+            ;;
+        *)
+            echo "Unknown ts command: {{command}}"
+            echo "Available: install, dev, lint, format, build"
+            exit 1
+            ;;
+    esac
 
-# Run dev in all TypeScript packages
-dev-ts:
-    cd ts && pnpm -r run dev
-
-# Run dev in specific TypeScript package
-dev-ts-pkg package:
-    cd ts && pnpm --filter {{package}} run dev
-
-# Lint TypeScript code
-lint-ts:
-    cd ts && pnpm -r run lint
-
-# Format TypeScript code
-format-ts:
-    cd ts && pnpm -r run format
-
-# Build TypeScript packages
-build-ts:
-    cd ts && pnpm -r run build
+# TypeScript package-specific commands
+ts-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ts
+    case "{{command}}" in
+        dev)
+            pnpm --filter {{package}} run dev
+            ;;
+        build)
+            pnpm --filter {{package}} run build
+            ;;
+        *)
+            echo "Unknown ts-pkg command: {{command}}"
+            echo "Available: dev, build"
+            exit 1
+            ;;
+    esac
 ```
 
 **Design Notes**:
-- Uses `ts/` path (assumes rename completed or updated after rename)
+- Uses recipe parameters to create namespace-like commands
+- Single `ts` recipe handles common workspace commands
+- `ts-pkg` recipe handles package-specific operations
+- All recipes use `cd ts` to enter workspace
 - Wraps pnpm commands directly
 - `-r` flag for recursive workspace operations
 - `--filter` for package-specific operations
-- Recipe names use `-ts` suffix
 
 **Why pnpm Commands**:
 - pnpm already handles workspace coordination
@@ -213,44 +272,63 @@ build-ts:
 - `--filter` targets specific packages
 - No need to reinvent what pnpm does
 
+**Usage Examples**:
+```bash
+just ts install             # Install all dependencies
+just ts dev                 # Run dev in all packages
+just ts lint                # Lint all packages
+just ts format              # Format all packages
+just ts build               # Build all packages
+just ts-pkg dev example     # Run dev for specific package
+just ts-pkg build example   # Build specific package
+```
+
 #### Repository Justfile Specification
 
 **Path**: `/tasks/repo/justfile`
 
-**Purpose**: Cross-cutting repository commands
+**Purpose**: Cross-cutting repository commands that coordinate across workspaces
 
 **Recipes**:
 
 ```just
 # Lint everything
-lint: lint-py lint-ts
+lint:
+    just py lint
+    just ts lint
 
 # Format everything
-format: format-py format-ts
+format:
+    just py format
+    just ts format
 
 # Install/sync all dependencies
-install: sync-py install-ts
+install:
+    just py sync
+    just ts install
 
 # Clean generated files
 clean:
-    rm -rf python/.venv python/**/__pycache__
+    rm -rf py/.venv py/**/__pycache__
     rm -rf ts/node_modules ts/**/node_modules ts/**/.next ts/**/.turbo
 ```
 
 **Design Notes**:
-- Composite recipes depend on domain recipes
+- Composite recipes call workspace-specific commands
+- Uses `just <namespace> <command>` pattern to invoke other recipes
 - `clean` is destructive but safe (only generated files)
-- Uses just's dependency syntax (`: dep1 dep2`)
-- No logic beyond basic cleanup
+- Simple sequential execution
+- No complex dependency syntax needed
 
-**Why Dependencies Work**:
-- just runs dependencies first
-- Natural way to compose commands
-- Clear what "lint everything" means
+**Why This Works**:
+- Clear what "lint everything" means (py lint, then ts lint)
+- Explicit execution order
+- Easy to add new workspaces
+- Natural composition pattern
 
 **Clean Command Safety**:
 - Only removes generated directories
-- Paths are explicit, no wildcards at root
+- Paths use `py/` and `ts/` directory names
 - User can recreate with `just install`
 - Standard monorepo cleanup pattern
 
@@ -288,17 +366,19 @@ clean:
 **Sections to Update**:
 
 1. **Directory Structure**:
-   - Change `typescript/` → `ts/`
+   - Change `python/` → `py/` and `typescript/` → `ts/`
+   - Add `tasks/` directory with subdirectories
    - Keep structure otherwise
 
 2. **Python Workspace** section:
-   - Add references to `just` commands
+   - Add references to namespace-style `just py` commands
    - Keep direct commands for reference
    - Note: both approaches work
 
 3. **TypeScript Workspace** section:
    - Same pattern as Python section
    - Update path to `ts/`
+   - Show namespace-style `just ts` commands
 
 **What NOT to Change**:
 - Keep workspace-specific details
@@ -310,85 +390,111 @@ clean:
 ### Files That Change
 
 1. **README.md**: Path updates, new sections (described above)
+2. **.gitignore**: May need `python/` → `py/` and `typescript/` → `ts/` updates
 
 ### Files That DO NOT Change
 
-These files are NOT affected by the rename:
+These files are NOT affected by the renames:
 
 - `pnpm-workspace.yaml`: Uses relative paths from ts/ root
 - `package.json` files: Use @workspace/* names, not paths
 - `biome.json`: Lives in ts/, no parent references
 - `tsconfig.json` files: Use relative paths within ts/
-- `.gitignore`: May have `typescript/` entries to update
-- `pyproject.toml`: No TypeScript references
-- Any Python config: No TypeScript references
+- `pyproject.toml`: Workspace-relative paths
+- `ruff.toml`: Workspace-relative paths
+- Any tool configs: Use workspace-relative paths
 
 ### Why These Don't Change
 
-The TypeScript workspace is self-contained. Configs inside `ts/` use relative paths. The parent directory name is irrelevant to the tools.
+Both workspaces are self-contained. Configs inside `py/` and `ts/` use relative paths. The parent directory names are irrelevant to the tools.
 
 ## Recipe Naming Convention
 
-**Pattern**: `<verb>-<workspace>` or `<verb>-<workspace>-pkg`
+**Pattern**: Namespace-style using recipe parameters
 
 **Examples**:
-- `lint-py`: Lint Python workspace
-- `dev-ts`: Run dev in TypeScript workspace
-- `sync-py-pkg`: Sync specific Python package
+- `just py lint`: Lint Python workspace
+- `just ts dev`: Run dev in TypeScript workspace
+- `just py-pkg sync example`: Sync specific Python package
+- `just ts-pkg build example`: Build specific TypeScript package
 
 **Rationale**:
-- Verb-first is action-oriented
-- Workspace suffix disambiguates
-- `-pkg` suffix indicates package parameter
-- Natural to type and read
+- Namespace-first is intuitive (reads left-to-right: workspace then action)
+- Clean separation: workspace is the namespace, command is the action
+- Natural to type and discover
+- Consistent with other modern CLIs (git, kubectl, etc.)
+- Easy to extend with new commands
 
-**Special Cases**:
-- `install`: No suffix, clearly means "everything"
-- `lint`: No suffix, clearly means "everything"
-- `format`: No suffix, clearly means "everything"
-- `clean`: No suffix, clearly means "everything"
+**Repository-wide Commands**:
+- `just install`: Install all dependencies (calls `py sync` and `ts install`)
+- `just lint`: Lint all workspaces (calls `py lint` and `ts lint`)
+- `just format`: Format all workspaces (calls `py format` and `ts format`)
+- `just clean`: Remove all generated files
+
+**Package-specific Commands**:
+- `just py-pkg <command> <package>`: Python package operations
+- `just ts-pkg <command> <package>`: TypeScript package operations
 
 ## Execution Model
 
-**Pattern**: `cd <workspace> && <command>`
+**Pattern**: Case statement with bash shebang in recipe
 
 **Why This Works**:
-- Explicit about where command runs
+- Explicit about where command runs (`cd py` or `cd ts`)
+- Case statement maps command name to tool invocation
 - Works from any directory
-- Subshell doesn't affect caller
-- Exit codes propagate
-- Output goes to terminal
+- Exit codes propagate correctly (`set -euo pipefail`)
+- Clear error messages for unknown commands
+- Simple to extend with new commands
 
 **Example**:
 ```just
-lint-py:
-    cd python && ruff check .
+py command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        lint)
+            ruff check .
+            ;;
+        *)
+            echo "Unknown py command: {{command}}"
+            exit 1
+            ;;
+    esac
 ```
 
 **What Happens**:
-1. Just runs from root
-2. Command changes to python/ directory
-3. ruff check runs in that context
-4. Output shows in terminal
-5. Exit code returns to just
-6. Subshell exits, we're back at root
+1. User runs `just py lint`
+2. Just invokes `py` recipe with `command="lint"`
+3. Bash script changes to `py/` directory
+4. Case statement matches "lint" and runs `ruff check .`
+5. Output shows in terminal
+6. Exit code propagates to just (fails on errors due to `set -euo pipefail`)
+7. Script exits, back at root
+
+**Benefits**:
+- Single recipe per workspace (not one per command)
+- Discoverable via error messages
+- Easy to add new commands
+- Type-safe (parameters validated by just)
 
 ## Implementation Order
 
 **Order Matters**: This is a safe, incremental approach
 
-1. **Create justfiles first** (using `typescript/` path if directory not renamed yet)
+1. **Create justfiles first** (using `python/` and `typescript/` paths if directories not renamed yet)
 2. **Test all recipes work** with current structure
-3. **Rename typescript/ → ts/** (simple directory move)
-4. **Update justfile paths** (change typescript to ts)
+3. **Rename directories**: `python/` → `py/` and `typescript/` → `ts/` (simple directory moves)
+4. **Update justfile paths** (change python to py, typescript to ts)
 5. **Update README.md** (paths and new sections)
 6. **Test everything again**
 
 **Why This Order**:
 - Justfiles are additive, non-breaking
 - Can test before changing anything
-- Rename is atomic (git mv)
-- Update paths after rename confirmed
+- Renames are atomic (git mv)
+- Update paths after renames confirmed
 - Documentation last ensures accuracy
 
 ## Validation Approach
@@ -401,14 +507,22 @@ lint-py:
 
 **Test Matrix**:
 ```
-just install     → Both workspaces sync
-just lint        → Both workspaces lint
-just format      → Both workspaces format
-just sync-py     → Python syncs
-just install-ts  → TypeScript installs
-just run-py pkg  → Python package runs
-just dev-ts      → TypeScript dev starts
-just clean       → Generated files removed
+just install          → Both workspaces sync/install
+just lint             → Both workspaces lint
+just format           → Both workspaces format
+just py sync          → Python syncs
+just py lint          → Python lints
+just py format        → Python formats
+just py check         → Python type checks
+just ts install       → TypeScript installs
+just ts dev           → TypeScript dev starts
+just ts lint          → TypeScript lints
+just ts format        → TypeScript formats
+just ts build         → TypeScript builds
+just py-pkg sync pkg  → Python package syncs
+just py-pkg run pkg   → Python package runs
+just ts-pkg dev pkg   → TypeScript package dev
+just clean            → Generated files removed
 ```
 
 **How to Test**:
@@ -417,6 +531,7 @@ just clean       → Generated files removed
 3. Run each command individually
 4. Verify output matches tool expectations
 5. Check exit codes (should be 0 for success)
+6. Test error cases (unknown commands should show help and exit 1)
 
 ## Cross-Platform Considerations
 
@@ -457,11 +572,16 @@ This design succeeds if:
 
 1. Developer runs `just install` and all dependencies install
 2. Developer runs `just lint` and all code lints
-3. Developer runs `just dev-ts-pkg example` and dev server starts
-4. Developer reads README and understands the workflow
-5. No existing workflows break
-6. No tool configuration changes required
-7. Justfiles are obvious and self-documenting
+3. Developer runs `just py lint` and Python code lints
+4. Developer runs `just ts dev` and dev servers start
+5. Developer runs `just ts-pkg dev example` and specific dev server starts
+6. Developer reads README and understands the workflow
+7. Commands are discoverable (`just --list` shows all commands)
+8. Unknown commands show helpful error messages
+9. No existing workflows break
+10. No tool configuration changes required
+11. Justfiles are obvious and self-documenting
+12. Namespace pattern feels natural and intuitive
 
 ## Explicit Non-Goals
 
