@@ -1,0 +1,43 @@
+# Python workspace commands
+py command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        sync)
+            uv sync
+            ;;
+        lint)
+            ruff check .
+            ;;
+        format)
+            ruff format .
+            ;;
+        check)
+            ty check .
+            ;;
+        *)
+            echo "Unknown py command: {{command}}"
+            echo "Available: sync, lint, format, check"
+            exit 1
+            ;;
+    esac
+
+# Python package-specific commands
+py-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd py
+    case "{{command}}" in
+        sync)
+            uv sync --package {{package}}
+            ;;
+        run)
+            uv run {{package}}
+            ;;
+        *)
+            echo "Unknown py-pkg command: {{command}}"
+            echo "Available: sync, run"
+            exit 1
+            ;;
+    esac

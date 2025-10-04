@@ -1,0 +1,46 @@
+# TypeScript workspace commands
+ts command:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ts
+    case "{{command}}" in
+        install)
+            pnpm install
+            ;;
+        dev)
+            pnpm -r run dev
+            ;;
+        lint)
+            pnpm -r run lint
+            ;;
+        format)
+            pnpm -r run format
+            ;;
+        build)
+            pnpm -r run build
+            ;;
+        *)
+            echo "Unknown ts command: {{command}}"
+            echo "Available: install, dev, lint, format, build"
+            exit 1
+            ;;
+    esac
+
+# TypeScript package-specific commands
+ts-pkg command package:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd ts
+    case "{{command}}" in
+        dev)
+            pnpm --filter {{package}} run dev
+            ;;
+        build)
+            pnpm --filter {{package}} run build
+            ;;
+        *)
+            echo "Unknown ts-pkg command: {{command}}"
+            echo "Available: dev, build"
+            exit 1
+            ;;
+    esac

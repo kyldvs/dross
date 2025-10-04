@@ -1,0 +1,19 @@
+# Lint everything
+lint:
+    just py lint
+    just ts lint
+
+# Format everything
+format:
+    just py format
+    just ts format
+
+# Install/sync all dependencies
+install:
+    just py sync
+    just ts install
+
+# Clean generated files
+clean:
+    rm -rf py/.venv py/**/__pycache__
+    rm -rf ts/node_modules ts/**/node_modules ts/**/.next ts/**/.turbo
