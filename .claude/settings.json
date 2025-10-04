@@ -1,6 +1,14 @@
 {
   "permissions": {
-    "allow": ["Bash(git:*)", "SlashCommand(/git)"],
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(git:*)",
+      "SlashCommand(/git)"
+    ],
     "deny": ["Bash(git push -f:*)"],
     "ask": []
   }
