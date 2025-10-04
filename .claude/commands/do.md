@@ -63,6 +63,16 @@ requirements. Focus on the simplest solution that could work.
 
 **Agent Name**: `phase-design`
 
+### Phase 2.5: Design Review (Manual)
+
+**Purpose**: Ensure the design is correct before proceeding to implementation.
+
+**Key Actions**:
+
+- Present the design documentation to the user
+- Ask the user to review and confirm the design, or request changes
+- Do NOT proceed to Build phase without explicit user confirmation
+
 ### Phase 3: Build
 
 **Purpose**: Implement the solution according to the design. Build the minimum
@@ -80,11 +90,8 @@ viable solution that solves the real problem.
 - Build just enough to make tests pass
 - Avoid mocks - test actual behavior
 - Ship working code quickly
-- Use `pusher` agent at meaningful milestones
 
 **Agent Name**: `phase-build`
-
-**Supporting Agent**: `pusher` (for version control at milestones)
 
 ### Phase 4: Document
 
@@ -108,15 +115,20 @@ viable solution that solves the real problem.
 
 ### Sequential Flow
 
-1. **Understand** → Establish what to build
-2. **Design** → Plan how to build it
-3. **Build** → Create the solution
-4. **Document** → Make it usable
+1. **Understand** → Establish what to build → **Commit changes** (use `pusher` agent)
+2. **Design** → Plan how to build it → **Commit changes** (use `pusher` agent)
+3. **Design Review** → Get user confirmation before proceeding
+4. **Build** → Create the solution → **Commit changes** (use `pusher` agent)
+5. **Document** → Make it usable → **Commit changes** (use `pusher` agent)
+
+### Version Control
+
+**IMPORTANT**: After EVERY phase (Understand, Design, Build, Document), automatically invoke the `pusher` agent to commit and push changes to version control. This ensures work is saved at each milestone and provides clear checkpoints.
 
 ### Iteration Points
 
 - **After Design Review**: May return to Understand phase if requirements unclear
-- **During Build**: Use `pusher` agent at each milestone
+- **During Build**: Use `pusher` agent at additional meaningful milestones within the phase
 
 ### Decision Making
 
@@ -137,6 +149,12 @@ viable solution that solves the real problem.
 
 Execute each phase sequentially using the appropriate sub-agent. Work
 autonomously within the established requirements and scope.
+
+**Critical Requirements**:
+
+1. **After each phase** (Understand, Design, Build, Document): Automatically invoke the `pusher` agent to commit and push changes
+2. **After Design phase**: Present the design documentation to the user and wait for explicit confirmation or change requests before proceeding to Build
+3. **Never skip the design review**: Do not proceed to Build without user approval
 
 **Remember**: The goal is to solve the actual problem with the least complexity
 possible. When agents ask questions, guide them toward simpler solutions. If an
