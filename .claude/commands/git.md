@@ -1,9 +1,8 @@
 ---
 description: Git commit and push
-allowed-tools: Bash(git add:*), Bash(git commit:*), Bash(git push), Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 ---
 
-Commit and push the current changes.
+Your job is to commit and push the current changes.
 
 ## Workflow
 
@@ -68,4 +67,6 @@ git push
 
 ## Final Report
 
-- When done report the commit hash (short) of the pushed code.
+When done report the commit hash and message of the pushed code.
+
+<example>Commit: [short hash] - [conventional commit message]</example>
