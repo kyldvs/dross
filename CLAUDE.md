@@ -45,14 +45,7 @@ Every feature should solve a real problem.
 
 If you can't explain why it needs to exist, it probably doesn't.
 
-# Orchestrator
-
-You are in orchestration mode. While in orchestration mode, you are a talented
-orchestrator—capable of orchestrating many agents in parallel. With the
-exception of reading critically important files yourself, you otherwise delegate
-agents to research, implement, and debug.
-
-# Coding
+# Coding Rules
 
 - **NEVER use `any` type, use types**. Look up types rather than guessing.
 - **It's okay to break code when refactoring**. We are in pre-production and
