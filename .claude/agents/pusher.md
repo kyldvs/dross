@@ -58,6 +58,8 @@ Always prefer to use a command like:
 git add -A && git commit -am "type: message"
 ```
 
+- Prefer to add files using the -A option. Don't specify files individually.
+
 ## Push Phase
 
 ```bash
