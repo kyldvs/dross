@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": ["Bash(git:*)", "SlashCommand(/git)"],
+    "deny": ["Bash(git push -f:*)"],
+    "ask": []
+  }
+}
