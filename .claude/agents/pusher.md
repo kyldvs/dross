@@ -1,6 +1,6 @@
 ---
 name: pusher
-description: "Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.\n\nExamples:\n\n<example>\nContext: A feature has reached a checkpoint.\nAssistant: I will use the pusher agent commit and push to version control.\n<pusher agent handles generating a commit message, comitting, and pushing>\nAssistant: - ([short hash]) [conventional commit message]</example>\n\nNote: Only provide the commit hash and message when reporting final status."
+description: "Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.\n\nExamples:\n\n<example>\nContext: A feature has reached a checkpoint.\nAssistant: Saving to version control via pusher agent.\n<pusher agent handles generating a commit message, comitting, and pushing>\nAssistant: Commit: [short hash] - [conventional commit message]</example>\n\nNote: Only provide the commit hash and message when reporting final status."
 tools: Bash(git add:*), Bash(git commit:*), Bash(git push), Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 model: sonnet
 ---
