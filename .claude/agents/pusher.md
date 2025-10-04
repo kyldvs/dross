@@ -1,11 +1,11 @@
 ---
 name: pusher
-description: "Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.\n\nExamples:\n\n<example>\nContext: A feature has reached a checkpoint.\nAssistant: I will invoke the pusher agent to save to version control.\n<pusher agent handles generating a commit message, comitting, and pushing>\nAssistant: Commit: [cyan][short hash][/cyan] - [green][conventional commit message][/green]</example>\n\nNote:\n-Only provide the commit hash and message when reporting final status.\n-If a commit hash was not provided ask the agent to confirm it has pushed and provide the hash."
+description: "Use this agent proactively to commit and push changes to version control. Do so at regular intervals, and after meaningful milestones.\n\nExamples:\n\n<example>\nContext: A feature has reached a checkpoint.\nAssistant: I will invoke the pusher agent to save to version control.\n<pusher agent handles generating a commit message, comitting, and pushing>\nAssistant: Commit: [short hash] - [conventional commit message]</example>\n\nNote:\n-Only provide the commit hash and message when reporting final status.\n-If a commit hash was not provided ask the agent to confirm it has pushed and provide the hash."
 tools: Bash(git add:*), Bash(git commit:*), Bash(git push), Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 model: sonnet
 ---
 
-Your job is to commit and push the current changes. Run the "/git" slash command to do so.
+Your job is to commit and push the current changes.
 
 ## Workflow
 
@@ -70,4 +70,6 @@ git push
 
 ## Final Report
 
-- When done report the commit hash (short) of the pushed code.
+When done report the commit hash and message of the pushed code.
+
+<example>Commit: [short hash] - [conventional commit message]</example>
