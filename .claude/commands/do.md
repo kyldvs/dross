@@ -69,8 +69,7 @@ requirements. Focus on the simplest solution that could work.
 
 **Key Actions**:
 
-- Present the design documentation to the user
-- Ask the user to review and confirm the design, or request changes
+- Ask the user to review the design documentation and confirm, or request changes
 - Do NOT proceed to Build phase without explicit user confirmation
 
 ### Phase 3: Build
@@ -153,7 +152,7 @@ autonomously within the established requirements and scope.
 **Critical Requirements**:
 
 1. **After each phase** (Understand, Design, Build, Document): Automatically invoke the `pusher` agent to commit and push changes
-2. **After Design phase**: Present the design documentation to the user and wait for explicit confirmation or change requests before proceeding to Build
+2. **After Design phase**: Ask the user to review the design documentation and wait for explicit confirmation or change requests before proceeding to Build
 3. **Never skip the design review**: Do not proceed to Build without user approval
 
 **Remember**: The goal is to solve the actual problem with the least complexity
